@@ -26,9 +26,62 @@ Bad data creates broken dashboards, incorrect reports, and unreliable decisions.
 
 ## Architecture
 
+## Architecture
+
+DataSentry follows a modular pipeline that processes CSV datasets, evaluates data quality, and stores analysis results for reporting and historical tracking.
+
 ```text
-CSV input -> load + validate -> profile -> rules -> quality score -> SQLite + JSON/HTML reports
+                  ┌───────────────────┐
+                  │    CSV Dataset    │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ CSV Loading and   │
+                  │ Input Validation  │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ Data Profiling    │
+                  │ Rows and Columns  │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ Configurable Rule │
+                  │ Engine (JSON)     │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ Quality Score and │
+                  │ Check Results     │
+                  └─────────┬─────────┘
+                            │
+                ┌───────────┴───────────┐
+                ▼                       ▼
+      ┌─────────────────┐     ┌─────────────────┐
+      │ SQLite History  │     │ JSON and HTML   │
+      │                 │     │ Reports         │
+      └────────┬────────┘     └─────────────────┘
+               │
+               ▼
+      ┌─────────────────┐
+      │ Streamlit       │
+      │ Dashboard       │
+      └─────────────────┘
 ```
+
+### Pipeline components
+
+1. **CSV ingestion:** Loads the input dataset and checks for file or parsing issues.
+2. **Data profiling:** Examines dataset characteristics, including rows, columns, missing values, and duplicates.
+3. **Rule engine:** Evaluates configurable data quality rules defined in JSON.
+4. **Quality scoring:** Calculates a score based on applicable checks and their results.
+5. **Persistence:** Stores run metadata and check results in SQLite.
+6. **Reporting:** Generates JSON summaries and offline HTML reports.
+7. **Visualization:** Uses Streamlit to display historical runs, quality metrics, charts, and detailed results.
 
 ## Project tree
 
