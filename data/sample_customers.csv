@@ -1,0 +1,10 @@
+customer_id,name,email,age,city,signup_date,status
+C001,Alice Johnson,alice@example.com,29,New York,2024-01-10,active
+C002,Bob Smith,bob@example.com,41,Chicago,2024-02-15,active
+C003,Carol White,carol@example.com,36,Seattle,2024-03-05,inactive
+C004,David Lee,david@example.com,17,Miami,2024-03-18,active
+C005,Alice Johnson,alice@example.com,29,New York,2024-01-10,active
+C006,Emma Brown,emma@example.com,,Boston,2024-05-01,pending
+C007,Frank Moore,invalid-email,22,Denver,2024-06-10,blocked
+C008,Grace Wilson,grace@example.com,99,Portland,2024-07-11,active
+C009,Henry Adams,henry@example.com,28,,2024-08-01,active

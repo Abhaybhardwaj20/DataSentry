@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "required_columns": ["customer_id", "name", "email", "age", "city", "signup_date", "status"],
+  "non_null_columns": ["name", "email", "age"],
+  "unique_columns": ["email"],
+  "allowed_values": {
+    "status": ["active", "inactive", "pending"]
+  },
+  "numeric_ranges": {
+    "age": {"min": 18, "max": 100}
+  },
+  "expected_types": {
+    "age": ["numeric"]
+  },
+  "regex_patterns": {
+    "email": "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
+  },
+  "minimum_rows": 3,
+  "maximum_rows": 50,
+  "duplicate_row_policy": "warn"
+}
