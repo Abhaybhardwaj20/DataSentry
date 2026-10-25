@@ -1,12 +1,34 @@
+# Python cache files
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Virtual environments
 .venv/
 venv/
+
+# Environment variables and secrets
 .env
+.env.*
+
+# Databases and logs
 *.sqlite3
 *.db
 *.log
+
+# Generated reports
 reports/
 !reports/.gitkeep
+
+# Generated ETL and API outputs
+data/etl_demo/
+data/api_demo/
+data/scheduled/
+data/scheduled_test/
+
+# Temporary scheduler test configuration
+schedule.test.json
+
+# Operating system files
 .DS_Store
+Thumbs.db

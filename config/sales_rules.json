@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "required_columns": [
+    "order_id",
+    "customer_name",
+    "email",
+    "order_date",
+    "product",
+    "quantity",
+    "unit_price",
+    "status",
+    "city"
+  ],
+  "non_null_columns": [
+    "order_id",
+    "customer_name",
+    "order_date",
+    "product",
+    "quantity",
+    "unit_price",
+    "status"
+  ],
+  "unique_columns": [
+    "order_id"
+  ],
+  "allowed_values": {
+    "status": [
+      "Completed",
+      "Pending",
+      "Cancelled"
+    ]
+  },
+  "numeric_ranges": {
+    "quantity": {
+      "min": 1,
+      "max": 100
+    },
+    "unit_price": {
+      "min": 1,
+      "max": 100000
+    }
+  },
+  "expected_types": {
+    "quantity": [
+      "numeric"
+    ],
+    "unit_price": [
+      "numeric"
+    ]
+  },
+  "regex_patterns": {
+    "email": "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
+  },
+  "minimum_rows": 3,
+  "maximum_rows": 200,
+  "duplicate_row_policy": "warn"
+}

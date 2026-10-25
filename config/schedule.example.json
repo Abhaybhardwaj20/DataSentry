@@ -1,0 +1,12 @@
+{
+  "source_type": "csv",
+  "csv_path": "data/datasentry_sales_test_dataset.csv",
+  "interval_seconds": 3600,
+  "config_path": "config/sales_rules.json",
+  "database": "data/datasentry.db",
+  "output_root": "data/scheduled",
+  "delimiter": ",",
+  "encoding": "utf-8",
+  "dry_run": false,
+  "log_file": "logs/datasentry-scheduler.log"
+}

@@ -1,73 +1,96 @@
-# DataSentry — Data Quality Checker
+# DataSentry
 
-DataSentry is a small Python project that inspects CSV files for common data quality issues. It profiles the dataset, applies configurable business rules, stores results in SQLite, and exports JSON and HTML reports. The project is intentionally local, beginner-friendly, and easy to explain in an interview.
+DataSentry is a local Python data engineering project for CSV and public JSON API ETL workflows, data validation, and quality reporting. The repository combines a practical ETL pattern with a reusable rule engine so it can be used as a portfolio project for entry-level data engineering roles.
 
-## Why this matters
+## Problem statement
 
-Bad data creates broken dashboards, incorrect reports, and unreliable decisions. Data quality checks help catch missing values, duplicates, impossible ranges, invalid types, and malformed records before they spread downstream.
+Modern data teams need reliable ingestion, cleaning, validation, and reporting workflows. This project demonstrates a complete local pipeline that validates raw files, stores cleaned data in bronze/silver/gold layers, and records execution metadata in SQLite so the process remains explainable and repeatable.
 
-## Features
+## Objectives
 
-- CSV validation and file checks
-- Row and column profiling
-- Configurable rule engine using JSON
-- Quality score calculation from 0 to 100
-- SQLite history for runs and checks
-- JSON and offline HTML reports
-- Python CLI with `check`, `history`, and `show-run` commands
-
-## Tech stack
-
-- Python 3.10+
-- pandas
-- SQLite via Python standard library `sqlite3`
-- argparse for CLI
-- pytest for tests
+- Ingest CSV files or public JSON APIs and validate required data and columns
+- Standardize and transform source data without altering the original input
+- Split the workflow into raw, bronze, silver, and gold layers
+- Track run metadata, accepted rows, and rejected rows in SQLite
+- Produce structured quality checks and offline reports
+- Keep the project runnable locally without cloud credentials or paid services
 
 ## Architecture
 
 ```text
-CSV input -> load + validate -> profile -> rules -> quality score -> SQLite + JSON/HTML reports
+CSV or public API source
+  -> raw layer (original file as extracted)
+  -> bronze layer (normalized column names, trimmed strings)
+  -> silver layer (valid cleaned rows, duplicates removed, rejected quarantined)
+  -> gold layer (aggregated business-ready summary)
+  -> SQLite metadata + JSON/HTML reports
 ```
 
-## Project tree
+## Technology stack
+
+- Python 3.10+
+- pandas
+- SQLite via the stdlib `sqlite3` module
+- argparse-based CLI
+- pytest
+- optional Streamlit dashboard for historical run review
+
+## Directory structure
 
 ```text
 DataSentry/
+├── config/
+│   ├── example_rules.json
+│   ├── sales_rules.json
+│   └── schedule.example.json
 ├── data/
+│   ├── datasentry_sales_test_dataset.csv
 │   ├── sample_customers.csv
-│   └── sample_orders.csv
+│   ├── sample_orders.csv
+│   └── etl_demo/
+│       ├── raw/
+│       ├── bronze/
+│       ├── silver/
+│       └── gold/
 ├── datasentry/
 │   ├── __init__.py
 │   ├── __main__.py
 │   ├── cli.py
 │   ├── config.py
 │   ├── csv_loader.py
+│   ├── dashboard.py
 │   ├── database.py
 │   ├── exceptions.py
 │   ├── orchestration.py
+│   ├── pipeline.py
 │   ├── profiling.py
 │   ├── reporting.py
 │   ├── rules.py
+│   ├── scheduler.py
 │   └── utils.py
-├── config/
-│   └── example_rules.json
 ├── reports/
-│   └── .gitkeep
 ├── tests/
-│   └── test_core.py
-├── .gitignore
+│   ├── test_datasentry.py
+│   ├── test_etl_pipeline.py
+│   ├── test_api_ingestion.py
+│   └── test_scheduler.py
+├── dashboard.py
 ├── README.md
 ├── requirements.txt
 ├── pyproject.toml
+├── .gitignore
 └── data/datasentry.db
 ```
 
-## Setup
+## Prerequisites
 
-### Windows PowerShell
+- Python 3.10+
+- pip
+- a local virtual environment is recommended
 
-```powershell
+## Installation
+
+```bash
 cd "C:\Users\abhay\OneDrive\Desktop\DataSentry"
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -75,123 +98,203 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-### macOS/Linux
+## Dataset
+
+The bundled sample dataset is `data/datasentry_sales_test_dataset.csv`. It models sales order records with columns such as `order_id`, `customer_name`, `email`, `order_date`, `product`, `quantity`, `unit_price`, `status`, and `city`.
+
+## ETL workflow
+
+The existing CSV ETL command is:
 
 ```bash
-cd ~/DataSentry
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+python -m datasentry etl data/datasentry_sales_test_dataset.csv --config config/sales_rules.json --database data/datasentry.db --output-root data/etl_demo
 ```
 
-## Running the sample workflow
-
-From the project root:
+Public JSON API ingestion uses the same extraction-to-gold pipeline:
 
 ```bash
-python -m datasentry check data/sample_customers.csv --config config/example_rules.json --database data/datasentry.db --reports-dir reports
+python -m datasentry api "https://dummyjson.com/products?limit=5" --database data/datasentry.db --output-root data/api_demo
 ```
 
-This command prints a concise summary, the run ID, and the JSON/HTML report paths.
+The API command fetches a public, no-auth JSON response, normalizes the records into a dataframe, and sends them through the same bronze/silver/gold stages already used by the CSV workflow.
 
-## Dashboard
+The same API workflow is also available through `etl --api-url`; the `api` command is the shorter form. Both ingestion paths reuse the existing ETL pipeline and validation rules.
 
-Launch the interactive dashboard with:
+What each layer does:
+
+- Raw: preserves the original extracted CSV file exactly as it was received
+- Bronze: trims spaces, normalizes column names, and standardizes values
+- Silver: removes duplicates and rejects rows that violate required rules
+- Gold: reports overall, product, city, status, daily, and legacy city/status sales summaries. Each aggregate includes valid order count, gross revenue, and average order value.
+
+The ETL workflow is safe to rerun because each run writes a unique, timestamped output set and records a run ID in SQLite.
+
+## Data quality rules
+
+The bundled rule set covers:
+- required columns
+- missing values
+- duplicate rows
+- allowed values
+- numeric range checks
+- email format validation
+- duplicate policy behavior (`warn` or `error`)
+
+Rows that fail validation are not silently discarded. They are tracked in the ETL run result as rejected rows and can be reviewed from the output summary or the SQLite metadata table.
+
+## Storage design
+
+SQLite is used for lightweight local metadata storage:
+
+- `runs`: core quality-checking execution history
+- `check_results`: detailed rule results per run
+- `pipeline_runs`: ETL execution summaries with run ID, timestamps, valid/rejected row counts, file paths, and status
+
+The output layers are written as CSV files under the chosen output root directory so they remain inspectable without requiring a database client.
+
+## CLI usage
+
+### Data quality check
 
 ```bash
-streamlit run dashboard.py
+python -m datasentry check data/datasentry_sales_test_dataset.csv --config config/sales_rules.json --database data/datasentry.db --reports-dir reports
 ```
 
-The dashboard reads the project SQLite database, shows summary metrics, charts, recent runs, and drill-down details, and refreshes from the latest database state without reloading the app on its own.
-
-## Custom configuration
+### ETL pipeline
 
 ```bash
-python -m datasentry check data/sample_customers.csv --config config/example_rules.json --database data/datasentry.db --reports-dir reports
+python -m datasentry etl data/datasentry_sales_test_dataset.csv --config config/sales_rules.json --database data/datasentry.db --output-root data/etl_demo
+python -m datasentry api "https://dummyjson.com/products?limit=5" --config config/sales_rules.json --database data/datasentry.db --output-root data/api_demo
 ```
 
-## History and run inspection
+### Automated scheduling
+
+The scheduler is part of the existing Python package and requires no additional dependency or service. Start it with a JSON configuration:
+
+```bash
+python -m datasentry schedule --config config/schedule.example.json
+```
+
+The example schedules the bundled CSV dataset hourly. A run starts immediately, then repeats after the configured delay following completion. Executions are sequential, so scheduled runs do not overlap. Press `Ctrl+C` to request shutdown; DataSentry finishes the current ETL run before stopping. Do not close the terminal forcibly if the current run needs to finish.
+
+Configuration uses `source_type` (`csv` or `api`), the matching `csv_path` or `api_url`, and a positive `interval_seconds`. Optional settings are `config_path`, `database`, `output_root`, `delimiter`, `encoding`, `timeout`, `dry_run`, and `log_file`. API schedules may also specify JSON objects for request `params` and `headers`. Paths are resolved from the current working directory. For an API schedule, set `source_type` to `api`, remove `csv_path`, and use settings such as:
+
+```json
+{
+  "source_type": "api",
+  "api_url": "https://dummyjson.com/products?limit=5",
+  "interval_seconds": 3600,
+  "config_path": "config/sales_rules.json",
+  "database": "data/datasentry.db",
+  "output_root": "data/scheduled_api",
+  "timeout": 30,
+  "params": {},
+  "headers": {},
+  "log_file": "logs/datasentry-scheduler.log"
+}
+```
+
+Scheduled start times, completion status, run IDs, and errors are written to the console and configured log file. `WARN` results remain warnings; exceptions and unexpected ETL statuses are logged as failures, and later scheduled runs continue. Keep sensitive request headers out of committed configuration files.
+
+### History and run inspection
 
 ```bash
 python -m datasentry history --database data/datasentry.db --limit 10
 python -m datasentry show-run <run_id> --database data/datasentry.db
 ```
 
-## Rule configuration
+### Dashboard
 
-`config/example_rules.json` supports:
-
-- `schema_version`: required value `1`
-- `required_columns`: list of required columns
-- `non_null_columns`: columns where empty values fail
-- `unique_columns`: columns that must have no duplicates among non-empty values
-- `allowed_values`: mapping of column to allowed values
-- `numeric_ranges`: inclusive bounds with `min` and `max`
-- `expected_types`: supported values such as `numeric`, `string`, `boolean`
-- `regex_patterns`: regex string patterns
-- `minimum_rows`: minimum acceptable row count
-- `maximum_rows`: maximum acceptable row count
-- `duplicate_row_policy`: `ignore`, `warn`, or `error`
-
-Whitespace-only strings count as missing. Numeric boundaries are inclusive. Invalid numeric values are ignored when checking ranges unless they are blank; the rule counts only valid numeric entries. Regex validation is applied to non-empty values only.
-
-## Quality score
-
-The score is computed as:
-
-```text
-score = 100 * (passed + 0.5 * warned) / applicable_checks
+```bash
+streamlit run dashboard.py
 ```
 
-Warnings count as half-credit. `SKIP` checks are excluded from the denominator. If no checks apply, the score is `null` rather than a misleading `100`.
+## Sample execution result
 
-## SQLite schema
+This project was executed against the bundled sales dataset using:
 
-DataSentry stores:
+```bash
+python -m datasentry etl data/datasentry_sales_test_dataset.csv --config config/sales_rules.json --database data/datasentry.db --output-root data/etl_demo
+```
 
-- `runs`: metadata about each analysis run
-- `check_results`: one row per check result linked by foreign key to the run
+Actual result:
 
-## Reports
+- Run ID: `5b36eec6-8241-4d44-85f0-08d8f15b7212`
+- Status: `WARN`
+- Input rows: `100`
+- Valid rows: `89`
+- Rejected rows: `11`
 
-Each run writes:
+The Gold CSV identifies each row's grouping in `aggregation` (`overall`, `product`, `city`, `status`, `daily`, or `city_status`). It retains the original `city`, `status`, `order_count`, `gross_revenue`, and `average_order_value` columns; `total_valid_orders` and `total_sales_revenue` make the overall and dimensional metrics explicit. Average order value is revenue divided by distinct order IDs in that aggregate. Revenue is `quantity * unit_price` across all accepted statuses, including pending and cancelled orders; the status breakdown lets consumers separate those values.
 
-- JSON summary with profile information and checks
-- HTML report that is fully offline and escapes user data before rendering
+For the bundled dataset and `config/sales_rules.json`, the verified Gold overall row has 88 valid orders, `total_sales_revenue` of 2,505,433, and `average_order_value` of about 28,470.83. The ETL reports 100 input rows, 88 valid rows, and 12 rejected rows (`WARN`).
 
-## Exit codes
+Rows rejected by Silver validation never reach Gold. `order_id` is treated as a unique order key: after other validity checks, the first valid occurrence is kept and subsequent occurrences are rejected. Gold also defensively keeps one row per order ID. This assumes the sales input has one record per order rather than multiple line items per order.
 
-- `0`: success and no ERROR-severity check failed
-- `1`: invalid input, configuration problem, persistence failure, or failed run
-- `2`: CLI argument misuse
+## Logging and monitoring
 
-## Common errors and fixes
+Each ETL run stores:
 
-- Missing file: confirm the CSV path is correct and the file exists.
-- Malformed CSV: inspect delimiters and quoting; the default is comma-separated and UTF-8.
-- Invalid config: fix JSON syntax or rule types before rerunning.
-- Unwritable database or report directory: check folder permissions.
+- run ID
+- source file name and fingerprint
+- start and end timestamps
+- duration in seconds
+- input row count
+- valid row count
+- rejected row count
+- run status
+- output file paths
+- error details when applicable
 
-## Limitations
+This is enough for a lightweight portfolio-ready execution history without introducing a distributed scheduler.
 
-This project is intentionally local and processes CSV files in memory. It does not support cloud storage, a web app, or distributed processing.
+## API ingestion notes
 
-## Interview talking points
+The API ingestion path is intentionally simple and safe:
 
-- Built a data quality checker from CSV ingestion through report output.
-- Used Python and SQLite for a complete local workflow without external services.
-- Implemented validation, profiling, metadata persistence, and transparent scoring.
+- it uses a public JSON API with no authentication
+- it validates the HTTP response and JSON payload before processing
+- it raises clear errors for timeouts, HTTP failures, and malformed payloads
+- it converts API records into rows that can be processed by the existing ETL stages
 
-Likely interview questions:
+The project does not implement cloud storage or distributed orchestration. The API path is local-first and designed for demonstration and learning.
 
-1. Why is data quality important?
-   - Data quality issues can cause poor decisions and unreliable analytics.
-2. What part of this project is most valuable?
-   - The combination of business rules, measurable scoring, and historical storage makes the workflow trustworthy.
-3. How would you extend it?
-   - Add more rules, larger datasets, or richer output formats while keeping the core logic simple.
+## Test execution
+
+Run the automated test suite with:
+
+```bash
+pytest -q
+```
+
+Scheduler tests mock ETL calls and use a fake stop event, so they neither wait for real intervals nor contact a public API.
+
+## Troubleshooting
+
+- Missing CSV file: verify the path is correct and the file exists
+- Invalid config or missing columns: check the JSON schema and required field names
+- Empty input: ensure the source contains data and a header row
+- Rejected rows: inspect the ETL result summary or stored run details
+- Write permission issues: ensure the output directory is writable
+
+## Cloud scope
+
+Cloud storage and cloud scheduling are intentionally out of scope. The scheduler runs in the local process and does not require cloud credentials.
+
+## Current limitations
+
+- ETL processing is local and file-based rather than distributed
+- Scheduling is in-process and requires the machine and terminal session to remain running
+- Schedules use a fixed delay after each run, not calendar or cron expressions
+- Missed runs are not replayed after shutdown, and schedules are not persisted in the database
+- API records are normalized to the existing sales-order schema, so unrelated API schemas may need source-specific mapping or rules
+
+## Future improvements
+
+- add more robust quarantine tables and row-level rejection reasons
+- add incremental load support using watermark columns
+- extend the gold layer with date-based trends and KPI dashboards
 
 ## License
 
-This project is provided for educational use and does not require a commercial license.
+This project is provided for educational and portfolio use and is intentionally lightweight and local-first.
