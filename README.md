@@ -34,6 +34,8 @@ CSV input -> load + validate -> profile -> rules -> quality score -> SQLite + JS
 
 ```text
 DataSentry/
+├── config/
+│   └── example_rules.json
 ├── data/
 │   ├── sample_customers.csv
 │   └── sample_orders.csv
@@ -50,18 +52,18 @@ DataSentry/
 │   ├── reporting.py
 │   ├── rules.py
 │   └── utils.py
-├── config/
-│   └── example_rules.json
 ├── reports/
 │   └── .gitkeep
 ├── tests/
-│   └── test_core.py
+│   └── test_datasentry.py
 ├── .gitignore
 ├── README.md
-├── requirements.txt
+├── dashboard.py
 ├── pyproject.toml
-└── data/datasentry.db
+└── requirements.txt
 ```
+
+**Note:** The SQLite database and generated reports are created locally and are not committed to the repository.
 
 ## Setup
 
